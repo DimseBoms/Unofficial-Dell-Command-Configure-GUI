@@ -1,7 +1,6 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-
 import sys
 import os
 from gi.repository import Gtk, Adw, GLib
@@ -61,6 +60,7 @@ class CctkInterface:
 
     def set_values(self):
         self.win.send_msg(1, "Setting values...")
+        ok = True
         # Set thermal management option
         if self.win.radio_optimized.get_active():
             os.system(self.cmd + "--ThermalManagement=Optimized")
@@ -80,9 +80,46 @@ class CctkInterface:
         elif self.win.express_charge.get_active():
             os.system(self.cmd + "--PrimaryBattChargeCfg=Express")
         elif self.win.radio_custom.get_active():
-            # TODO: Validate custom tresholds
-            os.system(self.cmd + "--PrimaryBattChargeCfg=Custom")
-        self.win.send_msg(0, "Done setting values")
+            # Validate custom tresholds
+            try:
+                start_tres = round(
+                    float(self.win.entry_start_treshold.get_buffer().get_text()))
+                stop_tres = round(
+                    float(self.win.entry_stop_treshold.get_buffer().get_text()))
+                print(f"start: {start_tres} stop: {stop_tres}")
+                if start_tres < stop_tres:
+                    print("1")
+                    print(stop_tres - start_tres)
+                    if stop_tres - start_tres >= 5:
+                        print("2")
+                        if start_tres >= 50 and start_tres <= 95:
+                            print("3")
+                            if stop_tres >= 55 and stop_tres <= 100:
+                                print("4")
+                                cmd_custom = f"--PrimaryBattChargeCfg=Custom:{start_tres}-{stop_tres}"
+                                print(self.cmd + cmd_custom)
+                                os.system(self.cmd + cmd_custom)
+                            else:
+                                ok = False
+                                self.win.send_msg(
+                                    0, "Error: Stop treshold cannot be less than 55 or more than 100")
+                        else:
+                            ok = False
+                            self.win.send_msg(
+                                0, "Error: Start treshold cannot be less than 50 or more than 95")
+                    else:
+                        self.win.send_msg(
+                            0, "Error: Difference between start en stop treshold should be 5 or more")
+                else:
+                    ok = False
+                    self.win.send_msg(
+                        0, "Error: Start treshold cannot be more than stop treshold")
+            except Exception as e:
+                print(e)
+                ok = False
+                self.win.send_msg(0, "Error: Check custom treshold formatting")
+        if ok:
+            self.win.send_msg(0, "Successfully applied changes")
 
 
 class MainWindow (Adw.ApplicationWindow):
@@ -292,7 +329,7 @@ class MainWindow (Adw.ApplicationWindow):
         self.entry_stop_treshold.set_placeholder_text("55-100")
         self.entry_stop_treshold.set_max_length(3)
         # Buttons to apply/discard changes
-        self.box_normal_buttons = Gtk.Box(
+        self.button_box = Gtk.Box(
             halign=Gtk.Align.CENTER,
             spacing=100,
             margin_start=10,
@@ -300,13 +337,12 @@ class MainWindow (Adw.ApplicationWindow):
             margin_top=20,
             margin_bottom=20,
         )
-        self.normal_button_destructive = Gtk.Button(
-            label='Discard changes and reload')
-        self.normal_button_destructive.get_style_context().add_class('destructive-action')
-        self.box_normal_buttons.append(self.normal_button_destructive)
-        self.normal_button_suggested = Gtk.Button(label='Apply changes')
-        self.normal_button_suggested.get_style_context().add_class('suggested-action')
-        self.box_normal_buttons.append(self.normal_button_suggested)
+        self.discard_button = Gtk.Button(label='Discard changes and reload')
+        self.discard_button.get_style_context().add_class('destructive-action')
+        self.button_box.append(self.discard_button)
+        self.apply_button = Gtk.Button(label='Apply changes')
+        self.apply_button.get_style_context().add_class('suggested-action')
+        self.button_box.append(self.apply_button)
         multi_append(
             self.box_entry_tresholds,
             self.lbl_start_treshold,
@@ -322,17 +358,18 @@ class MainWindow (Adw.ApplicationWindow):
             self.box_entry_tresholds
         )
         # Adds elements outside of clamp
-        self.box_main.append(self.box_normal_buttons)
+        self.box_main.append(self.button_box)
         # Starts interface
         self.cctk_interface = CctkInterface(self)
         self.cctk_interface.read_values()
-        self.normal_button_destructive.connect(
+        self.discard_button.connect(
             "clicked", self.cctk_interface.start_read_values
         )
-        self.normal_button_suggested.connect(
+        self.apply_button.connect(
             "clicked", self.cctk_interface.start_set_values
         )
     # Send message dialog
+
     def send_msg(self, work_status, msg):
         statusbox = Gtk.Box()
         lbl_status = Gtk.Label(
@@ -353,6 +390,7 @@ class MainWindow (Adw.ApplicationWindow):
             lbl_status
         )
         self.hb.set_title_widget(statusbox)
+
 
 class MyApp (Adw.Application):
     def __init__(self, **kwargs):

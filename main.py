@@ -1,10 +1,11 @@
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+
 import sys
 import os
 from gi.repository import Gtk, Adw, GLib
 from threading import Thread
-import gi
-gi.require_version('Gtk', '4.0')
-gi.require_version('Adw', '1')
 
 
 # Appends variable amount of objects to the given parent
@@ -31,6 +32,7 @@ class CctkInterface:
 
     # Reads initial values from BIOS
     def read_values(self):
+        self.win.send_msg(1, "Reading values...")
         res_thermal = os.popen(
             self.cmd + "--ThermalManagement").read().replace("\n", "")
         # Reads thermal management option
@@ -55,8 +57,10 @@ class CctkInterface:
             self.win.express_charge.set_active(True)
         elif res_battery == "PrimaryBattChargeCfg=Custom":
             self.win.radio_custom.set_active(True)
+        self.win.send_msg(0, "Successfully read values")
 
     def set_values(self):
+        self.win.send_msg(1, "Setting values...")
         # Set thermal management option
         if self.win.radio_optimized.get_active():
             os.system(self.cmd + "--ThermalManagement=Optimized")
@@ -78,8 +82,7 @@ class CctkInterface:
         elif self.win.radio_custom.get_active():
             # TODO: Validate custom tresholds
             os.system(self.cmd + "--PrimaryBattChargeCfg=Custom")
-        self.start_read_values(self)
-        # TODO: Set spinner and status label
+        self.win.send_msg(0, "Done setting values")
 
 
 class MainWindow (Adw.ApplicationWindow):
@@ -329,8 +332,27 @@ class MainWindow (Adw.ApplicationWindow):
         self.normal_button_suggested.connect(
             "clicked", self.cctk_interface.start_set_values
         )
-    # TODO: Add information label and spinner
-
+    # Send message dialog
+    def send_msg(self, work_status, msg):
+        statusbox = Gtk.Box()
+        lbl_status = Gtk.Label(
+            label=msg,
+            margin_start=5,
+            margin_end=5,
+            margin_top=5,
+            margin_bottom=5,
+        )
+        spinner = Gtk.Spinner()
+        if work_status == 1:
+            spinner.start()
+        else:
+            spinner.stop()
+        multi_append(
+            statusbox,
+            spinner,
+            lbl_status
+        )
+        self.hb.set_title_widget(statusbox)
 
 class MyApp (Adw.Application):
     def __init__(self, **kwargs):

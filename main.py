@@ -32,6 +32,7 @@ class CctkInterface:
     # Reads initial values from BIOS
     def read_values(self):
         self.win.send_msg(1, "Reading values...")
+        ok = True
         res_thermal = os.popen(
             self.cmd + "--ThermalManagement").read().replace("\n", "")
         # Reads thermal management option
@@ -54,9 +55,14 @@ class CctkInterface:
             self.win.radio_prim_ac.set_active(True)
         elif res_battery == "PrimaryBattChargeCfg=Express":
             self.win.express_charge.set_active(True)
-        elif res_battery == "PrimaryBattChargeCfg=Custom":
+        elif res_battery.split(':')[0] == "PrimaryBattChargeCfg=Custom":
+            res_battery = res_battery.split(':')
+            start_stop = res_battery[1].split('-')
+            self.win.entry_start_treshold.get_buffer().set_text(start_stop[0], len(start_stop[0]))
+            self.win.entry_stop_treshold.get_buffer().set_text(start_stop[1], len(start_stop[1]))
             self.win.radio_custom.set_active(True)
-        self.win.send_msg(0, "Successfully read values")
+        if ok:
+            self.win.send_msg(0, "Successfully read values")
 
     def set_values(self):
         self.win.send_msg(1, "Setting values...")
@@ -86,18 +92,11 @@ class CctkInterface:
                     float(self.win.entry_start_treshold.get_buffer().get_text()))
                 stop_tres = round(
                     float(self.win.entry_stop_treshold.get_buffer().get_text()))
-                print(f"start: {start_tres} stop: {stop_tres}")
                 if start_tres < stop_tres:
-                    print("1")
-                    print(stop_tres - start_tres)
                     if stop_tres - start_tres >= 5:
-                        print("2")
                         if start_tres >= 50 and start_tres <= 95:
-                            print("3")
                             if stop_tres >= 55 and stop_tres <= 100:
-                                print("4")
                                 cmd_custom = f"--PrimaryBattChargeCfg=Custom:{start_tres}-{stop_tres}"
-                                print(self.cmd + cmd_custom)
                                 os.system(self.cmd + cmd_custom)
                             else:
                                 ok = False
@@ -368,8 +367,8 @@ class MainWindow (Adw.ApplicationWindow):
         self.apply_button.connect(
             "clicked", self.cctk_interface.start_set_values
         )
-    # Send message dialog
 
+    # Set status in topheader
     def send_msg(self, work_status, msg):
         statusbox = Gtk.Box()
         lbl_status = Gtk.Label(

@@ -1,9 +1,10 @@
+import sys
+import os
+from gi.repository import Gtk, Adw, GLib
+from threading import Thread
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GLib
-import os
-import sys
 
 
 # Appends variable amount of objects to the given parent
@@ -17,6 +18,16 @@ class CctkInterface:
     def __init__(self, win):
         self.win = win
         self.cmd = "sudo /opt/dell/dcc/cctk "
+
+    # Threadstarter for read_values()
+    def start_read_values(self, start_obj):
+        th = Thread(target=self.read_values)
+        th.start()
+
+    # Threadstarter for set_values()
+    def start_set_values(self, start_obj):
+        th = Thread(target=self.set_values)
+        th.start()
 
     # Reads initial values from BIOS
     def read_values(self):
@@ -33,7 +44,42 @@ class CctkInterface:
             self.win.radio_ultra.set_active(True)
         # Reads battery charge config
         res_battery = os.popen(
-            self.cmd + "--ThermalManagement").read().replace("\n", "")
+            self.cmd + "--PrimaryBattChargeCfg").read().replace("\n", "")
+        if res_battery == "PrimaryBattChargeCfg=Adaptive":
+            self.win.radio_adaptive.set_active(True)
+        elif res_battery == "PrimaryBattChargeCfg=Standard":
+            self.win.radio_standard.set_active(True)
+        elif res_battery == "PrimaryBattChargeCfg=PrimAcUse":
+            self.win.radio_prim_ac.set_active(True)
+        elif res_battery == "PrimaryBattChargeCfg=Express":
+            self.win.express_charge.set_active(True)
+        elif res_battery == "PrimaryBattChargeCfg=Custom":
+            self.win.radio_custom.set_active(True)
+
+    def set_values(self):
+        # Set thermal management option
+        if self.win.radio_optimized.get_active():
+            os.system(self.cmd + "--ThermalManagement=Optimized")
+        elif self.win.radio_cool.get_active():
+            os.system(self.cmd + "--ThermalManagement=Cool")
+        elif self.win.radio_quiet.get_active():
+            os.system(self.cmd + "--ThermalManagement=Quiet")
+        elif self.win.radio_ultra.get_active():
+            os.system(self.cmd + "--ThermalManagement=UltraPerformance")
+        # Set battery charge config
+        if self.win.radio_adaptive.get_active():
+            os.system(self.cmd + "--PrimaryBattChargeCfg=Adaptive")
+        elif self.win.radio_standard.get_active():
+            os.system(self.cmd + "--PrimaryBattChargeCfg=Standard")
+        elif self.win.radio_prim_ac.get_active():
+            os.system(self.cmd + "--PrimaryBattChargeCfg=PrimAcUse")
+        elif self.win.express_charge.get_active():
+            os.system(self.cmd + "--PrimaryBattChargeCfg=Express")
+        elif self.win.radio_custom.get_active():
+            # TODO: Validate custom tresholds
+            os.system(self.cmd + "--PrimaryBattChargeCfg=Custom")
+        self.start_read_values(self)
+        # TODO: Set spinner and status label
 
 
 class MainWindow (Adw.ApplicationWindow):
@@ -229,6 +275,7 @@ class MainWindow (Adw.ApplicationWindow):
             margin_bottom=5,
         )
         self.entry_start_treshold = Gtk.Entry()
+        self.entry_start_treshold.set_placeholder_text("50-95")
         self.entry_start_treshold.set_max_length(3)
         self.lbl_stop_Treshold = Gtk.Label(
             label='Stop treshold:',
@@ -239,6 +286,7 @@ class MainWindow (Adw.ApplicationWindow):
             margin_bottom=5,
         )
         self.entry_stop_treshold = Gtk.Entry()
+        self.entry_stop_treshold.set_placeholder_text("55-100")
         self.entry_stop_treshold.set_max_length(3)
         # Buttons to apply/discard changes
         self.box_normal_buttons = Gtk.Box(
@@ -249,7 +297,8 @@ class MainWindow (Adw.ApplicationWindow):
             margin_top=20,
             margin_bottom=20,
         )
-        self.normal_button_destructive = Gtk.Button(label='Discard changes')
+        self.normal_button_destructive = Gtk.Button(
+            label='Discard changes and reload')
         self.normal_button_destructive.get_style_context().add_class('destructive-action')
         self.box_normal_buttons.append(self.normal_button_destructive)
         self.normal_button_suggested = Gtk.Button(label='Apply changes')
@@ -274,6 +323,13 @@ class MainWindow (Adw.ApplicationWindow):
         # Starts interface
         self.cctk_interface = CctkInterface(self)
         self.cctk_interface.read_values()
+        self.normal_button_destructive.connect(
+            "clicked", self.cctk_interface.start_read_values
+        )
+        self.normal_button_suggested.connect(
+            "clicked", self.cctk_interface.start_set_values
+        )
+    # TODO: Add information label and spinner
 
 
 class MyApp (Adw.Application):

@@ -442,4 +442,23 @@ class MyApp (Adw.Application):
 app = MyApp(
     application_id='io.github.DimseBoms.dell-command-center'
 )
-app.run(sys.argv)
+# Checks for install flag and adds .desktop entry
+install = False
+for arg in sys.argv:
+    arg = str(arg)
+    if arg == "--install":
+        install = True
+        home_dir = os.environ['HOME']
+        with open(f"{home_dir}/.local/share/applications/dcc-gui.desktop", 'w') as desktop_file:
+            desktop_file.write(
+                "[Desktop Entry]\n" + 
+                "Encoding=UTF-8\n" +
+                "Type=Application\n" +
+                "Terminal=false\n" +
+                f"Exec=/usr/bin/python3 {os.getcwd()}/main.py\n" +
+                "Name=Dell Command Configure GUI\n" +
+                f"Icon={os.getcwd()}/logo.png\n"
+            )
+# Runs normally
+if not install:
+    app.run(sys.argv)

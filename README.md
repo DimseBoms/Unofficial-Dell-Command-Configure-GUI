@@ -20,9 +20,13 @@ cd ~/.local/share
 ```
 git clone https://github.com/DimseBoms/Unofficial-Dell-Command-Configure-GUI
 ```
+* Navigate to the newly downloaded repo
+```
+cd ./Unofficial-Dell-Command-Configure-GUI
+```
 * Add the utility to your application menu
 ```
-python3 ./Unofficial-Dell-Command-Configure-GUI/main.py --install
+python3 main.py --install
 ```
 * To make the Dell Command Configure backend accessible without having to use passwords we have to add an entry to the bottom of /etc/sudoers using visudo:
 ```

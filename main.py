@@ -68,14 +68,17 @@ class CctkInterface:
         elif res_battery.split(':')[0] == "PrimaryBattChargeCfg=Custom":
             res_battery = res_battery.split(':')
             start_stop = res_battery[1].split('-')
-            self.win.entry_start_treshold.get_buffer().set_text(start_stop[0], len(start_stop[0]))
-            self.win.entry_stop_treshold.get_buffer().set_text(start_stop[1], len(start_stop[1]))
+            self.win.entry_start_treshold.get_buffer().set_text(
+                start_stop[0], len(start_stop[0]))
+            self.win.entry_stop_treshold.get_buffer().set_text(
+                start_stop[1], len(start_stop[1]))
             self.win.radio_custom.set_active(True)
             ok_bat = True
         if ok_thermal and ok_bat:
             self.win.send_msg(0, "Successfully read values")
         else:
-            self.win.send_msg(0, "Error fetching values. Check if DCC is installed and accessable")
+            self.win.send_msg(
+                0, "Error fetching values. Check if DCC is installed and accessable")
 
     def set_values(self):
         self.win.send_msg(1, "Setting values...")
@@ -83,37 +86,45 @@ class CctkInterface:
         ok_bat = False
         # Set thermal management option
         if self.win.radio_optimized.get_active():
-            res = subprocess.call(self.cmd + "--ThermalManagement=Optimized", shell=True)
+            res = subprocess.call(
+                self.cmd + "--ThermalManagement=Optimized", shell=True)
             if res == 0:
                 ok_thermal = True
         elif self.win.radio_cool.get_active():
-            res = subprocess.call(self.cmd + "--ThermalManagement=Cool", shell=True)
+            res = subprocess.call(
+                self.cmd + "--ThermalManagement=Cool", shell=True)
             if res == 0:
                 ok_thermal = True
         elif self.win.radio_quiet.get_active():
-            res = subprocess.call(self.cmd + "--ThermalManagement=Quiet", shell=True)
+            res = subprocess.call(
+                self.cmd + "--ThermalManagement=Quiet", shell=True)
             if res == 0:
                 ok_thermal = True
         elif self.win.radio_ultra.get_active():
-            res = subprocess.call(self.cmd + "--ThermalManagement=UltraPerformance", shell=True)
+            res = subprocess.call(
+                self.cmd + "--ThermalManagement=UltraPerformance", shell=True)
             if res == 0:
                 ok_thermal = True
         print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
         # Set battery charge config
         if self.win.radio_adaptive.get_active():
-            res = subprocess.call(self.cmd + "--PrimaryBattChargeCfg=Adaptive", shell=True)
+            res = subprocess.call(
+                self.cmd + "--PrimaryBattChargeCfg=Adaptive", shell=True)
             if res == 0:
                 ok_bat = True
         elif self.win.radio_standard.get_active():
-            res = subprocess.call(self.cmd + "--PrimaryBattChargeCfg=Standard", shell=True)
+            res = subprocess.call(
+                self.cmd + "--PrimaryBattChargeCfg=Standard", shell=True)
             if res == 0:
                 ok_bat = True
         elif self.win.radio_prim_ac.get_active():
-            res = subprocess.call(self.cmd + "--PrimaryBattChargeCfg=PrimAcUse", shell=True)
+            res = subprocess.call(
+                self.cmd + "--PrimaryBattChargeCfg=PrimAcUse", shell=True)
             if res == 0:
                 ok_bat = True
         elif self.win.express_charge.get_active():
-            res = subprocess.call(self.cmd + "--PrimaryBattChargeCfg=Express", shell=True)
+            res = subprocess.call(
+                self.cmd + "--PrimaryBattChargeCfg=Express", shell=True)
             if res == 0:
                 ok_bat = True
         elif self.win.radio_custom.get_active():
@@ -128,7 +139,8 @@ class CctkInterface:
                         if start_tres >= 50 and start_tres <= 95:
                             if stop_tres >= 55 and stop_tres <= 100:
                                 cmd_custom = f"--PrimaryBattChargeCfg=Custom:{start_tres}-{stop_tres}"
-                                res = subprocess.call(self.cmd + cmd_custom, shell=True)
+                                res = subprocess.call(
+                                    self.cmd + cmd_custom, shell=True)
                                 if res == 0:
                                     ok_bat = True
                             else:
@@ -150,7 +162,8 @@ class CctkInterface:
         if ok_thermal and ok_bat:
             self.win.send_msg(0, "Successfully applied changes")
         else:
-            self.win.send_msg(0, "Error setting values. Check if DCC is installed and accessable")
+            self.win.send_msg(
+                0, "Error setting values. Check if DCC is installed and accessable")
 
 
 class MainWindow (Adw.ApplicationWindow):
@@ -451,7 +464,7 @@ for arg in sys.argv:
         home_dir = os.environ['HOME']
         with open(f"{home_dir}/.local/share/applications/dcc-gui.desktop", 'w') as desktop_file:
             desktop_file.write(
-                "[Desktop Entry]\n" + 
+                "[Desktop Entry]\n" +
                 "Encoding=UTF-8\n" +
                 "Type=Application\n" +
                 "Terminal=false\n" +

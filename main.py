@@ -475,3 +475,6 @@ for arg in sys.argv:
 # Runs normally
 if not install:
     app.run(sys.argv)
+
+# TODO: Add polkit rules so the application can be run with pkexec
+# TODO: Add ability to control keyboard backlight settings

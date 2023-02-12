@@ -272,7 +272,7 @@ class CctkInterface:
                 ok_bat = True
         elif self.win.express_charge.get_active() and \
                 self.win.express_charge != self.last_radio_battery:
-            self.last_radio_battery = self.win.radio_express_charge
+            self.last_radio_battery = self.win.express_charge
             res = subprocess.call(
                 self.cmd + "--PrimaryBattChargeCfg=Express", shell=True)
             if res == 0:

@@ -140,7 +140,7 @@ class CctkInterface:
             self.last_dropdown_kbd_ac = 6
             ok_kbd = True
             self.win.dropdown_kbd_ac.set_selected(6)
-        elif res_kbd_ac.split('=')[-1] == "never":
+        elif res_kbd_ac.split('=')[-1] == "Never":
             self.last_dropdown_kbd_ac = 7
             ok_kbd = True
             self.win.dropdown_kbd_ac.set_selected(7)  
@@ -175,7 +175,7 @@ class CctkInterface:
             self.last_dropdown_kbd_bat = 6
             ok_kbd = True
             self.win.dropdown_kbd_bat.set_selected(6)
-        elif res_kbd_bat.split('=')[-1] == "never":
+        elif res_kbd_bat.split('=')[-1] == "Never":
             self.last_dropdown_kbd_bat = 7
             ok_kbd = True
             self.win.dropdown_kbd_bat.set_selected(7)
@@ -204,8 +204,8 @@ class CctkInterface:
             if not ok_kbd:
                 set_sens_multi(
                     False,
-                    self.win.kbd_ac_combo,
-                    self.win.kbd_bat_combo
+                    self.win.dropdown_kbd_ac,
+                    self.win.dropdown_kbd_bat
                 )
         else:
             self.win.send_msg(

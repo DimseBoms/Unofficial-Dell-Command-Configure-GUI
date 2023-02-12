@@ -1,11 +1,16 @@
+import subprocess
+import os
+import sys
 import gi
+import faulthandler
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-import sys
-import os
-import subprocess
-from gi.repository import Gtk, Adw, GLib
 from threading import Thread
+from gi.repository import Gtk, Adw, GLib
+
+
+# Great segfault debugger
+faulthandler.enable()
 
 
 # Appends variable amount of objects to the given parent
@@ -16,9 +21,15 @@ def multi_append(parent, *args):
 
 # Interface class to read values and run commands in Dell DCC CCTK
 class CctkInterface:
+    # Interface construction including values to remember the current active
+    # radio buttons to only make the necessary changes in DCC
     def __init__(self, win):
         self.win = win
         self.cmd = "sudo /opt/dell/dcc/cctk "
+        self.last_radio_thermal = object
+        self.last_radio_battery = object
+        self.last_custom_start = 0
+        self.last_custom_stop = 0
 
     # Threadstarter for read_values()
     def start_read_values(self, start_obj):
@@ -40,89 +51,124 @@ class CctkInterface:
         # Reads thermal management option
         if res_thermal == "ThermalManagement=Optimized":
             self.win.radio_optimized.set_active(True)
+            self.last_radio_thermal = self.win.radio_optimized
             ok_thermal = True
         elif res_thermal == "ThermalManagement=Cool":
             self.win.radio_cool.set_active(True)
+            self.last_radio_thermal = self.win.radio_cool
             ok_thermal = True
         elif res_thermal == "ThermalManagement=Quiet":
             self.win.radio_quiet.set_active(True)
+            self.last_radio_thermal = self.win.radio_quiet
             ok_thermal = True
         elif res_thermal == "ThermalManagement=UltraPerformance":
             self.win.radio_ultra.set_active(True)
+            self.last_radio_thermal = self.win.radio_ultra
             ok_thermal = True
         # Reads battery charge config
         res_battery = os.popen(
             self.cmd + "--PrimaryBattChargeCfg").read().replace("\n", "")
         if res_battery == "PrimaryBattChargeCfg=Adaptive":
             self.win.radio_adaptive.set_active(True)
+            self.last_radio_battery = self.win.radio_adaptive
             ok_bat = True
         elif res_battery == "PrimaryBattChargeCfg=Standard":
             self.win.radio_standard.set_active(True)
+            self.last_radio_battery = self.win.radio_standard
             ok_bat = True
         elif res_battery == "PrimaryBattChargeCfg=PrimAcUse":
             self.win.radio_prim_ac.set_active(True)
+            self.last_radio_battery = self.win.radio_prim_ac
             ok_bat = True
         elif res_battery == "PrimaryBattChargeCfg=Express":
             self.win.express_charge.set_active(True)
+            self.last_radio_battery = self.win.express_charge
             ok_bat = True
         elif res_battery.split(':')[0] == "PrimaryBattChargeCfg=Custom":
             res_battery = res_battery.split(':')
             start_stop = res_battery[1].split('-')
+            self.last_custom_start = start_stop[0]
+            self.last_custom_stop = start_stop[1]
             self.win.entry_start_treshold.get_buffer().set_text(
-                start_stop[0], len(start_stop[0]))
+                self.last_custom_start,
+                len(self.last_custom_start)
+            )
             self.win.entry_stop_treshold.get_buffer().set_text(
-                start_stop[1], len(start_stop[1]))
+                self.last_custom_stop,
+                len(self.last_custom_stop)
+            )
             self.win.radio_custom.set_active(True)
+            self.last_radio_battery = self.win.radio_custom
+            self.win.entry_start_treshold.set_placeholder_text("")
+            self.win.entry_stop_treshold.set_placeholder_text("")
             ok_bat = True
-        if ok_thermal and ok_bat:
+        if ok_thermal or ok_bat:
             self.win.send_msg(0, "Successfully read values")
         else:
             self.win.send_msg(
                 0, "Error fetching values. Check if DCC is installed and accessable")
 
+    # Sets values in bios via DCC
     def set_values(self):
         self.win.send_msg(1, "Setting values...")
         ok_thermal = False
         ok_bat = False
+        err = False
         # Set thermal management option
-        if self.win.radio_optimized.get_active():
+        if self.win.radio_optimized.get_active() and \
+                self.win.radio_optimized != self.last_radio_thermal:
+            self.last_radio_thermal = self.win.radio_optimized
             res = subprocess.call(
                 self.cmd + "--ThermalManagement=Optimized", shell=True)
             if res == 0:
                 ok_thermal = True
-        elif self.win.radio_cool.get_active():
+        elif self.win.radio_cool.get_active() and \
+                self.win.radio_cool != self.last_radio_thermal:
+            self.last_radio_thermal = self.win.radio_cool
             res = subprocess.call(
                 self.cmd + "--ThermalManagement=Cool", shell=True)
             if res == 0:
                 ok_thermal = True
-        elif self.win.radio_quiet.get_active():
+        elif self.win.radio_quiet.get_active() and \
+                self.win.radio_quiet != self.last_radio_thermal:
+            self.last_radio_thermal = self.win.radio_quiet
             res = subprocess.call(
                 self.cmd + "--ThermalManagement=Quiet", shell=True)
             if res == 0:
                 ok_thermal = True
-        elif self.win.radio_ultra.get_active():
+        elif self.win.radio_ultra.get_active() and \
+                self.win.radio_ultra != self.last_radio_thermal:
+            self.last_radio_thermal = self.win.radio_ultra
             res = subprocess.call(
                 self.cmd + "--ThermalManagement=UltraPerformance", shell=True)
             if res == 0:
                 ok_thermal = True
-        print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
+        # print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
         # Set battery charge config
-        if self.win.radio_adaptive.get_active():
+        if self.win.radio_adaptive.get_active() and \
+                self.win.radio_adaptive != self.last_radio_battery:
+            self.last_radio_battery = self.win.radio_adaptive
             res = subprocess.call(
                 self.cmd + "--PrimaryBattChargeCfg=Adaptive", shell=True)
             if res == 0:
                 ok_bat = True
-        elif self.win.radio_standard.get_active():
+        elif self.win.radio_standard.get_active() and \
+                self.win.radio_standard != self.last_radio_battery:
+            self.last_radio_battery = self.win.radio_standard
             res = subprocess.call(
                 self.cmd + "--PrimaryBattChargeCfg=Standard", shell=True)
             if res == 0:
                 ok_bat = True
-        elif self.win.radio_prim_ac.get_active():
+        elif self.win.radio_prim_ac.get_active() and \
+                self.win.radio_prim_ac != self.last_radio_battery:
+            self.last_radio_battery = self.win.radio_prim_ac
             res = subprocess.call(
                 self.cmd + "--PrimaryBattChargeCfg=PrimAcUse", shell=True)
             if res == 0:
                 ok_bat = True
-        elif self.win.express_charge.get_active():
+        elif self.win.express_charge.get_active() and \
+                self.win.express_charge != self.last_radio_battery:
+            self.last_radio_battery = self.win.radio_express_charge
             res = subprocess.call(
                 self.cmd + "--PrimaryBattChargeCfg=Express", shell=True)
             if res == 0:
@@ -138,32 +184,48 @@ class CctkInterface:
                     if stop_tres - start_tres >= 5:
                         if start_tres >= 50 and start_tres <= 95:
                             if stop_tres >= 55 and stop_tres <= 100:
-                                cmd_custom = f"--PrimaryBattChargeCfg=Custom:{start_tres}-{stop_tres}"
-                                res = subprocess.call(
-                                    self.cmd + cmd_custom, shell=True)
-                                if res == 0:
-                                    ok_bat = True
+                                if self.last_custom_start != start_tres or self.last_custom_stop != stop_tres \
+                                    or self.last_radio_battery != self.win.radio_custom:
+                                    self.last_radio_battery = self.win.radio_custom
+                                    self.last_custom_start = start_tres
+                                    self.last_custom_stop = stop_tres
+                                    cmd_custom = f"--PrimaryBattChargeCfg=Custom:{start_tres}-{stop_tres}"
+                                    res = subprocess.call(
+                                        self.cmd + cmd_custom, shell=True)
+                                    if res == 0:
+                                        ok_bat = True
+                                else:
+                                    err = True
+                                    self.win.send_msg(
+                                    0, "Values not set. No changes detected")
                             else:
+                                err = True
                                 self.win.send_msg(
                                     0, "Error: Stop treshold cannot be less than 55 or more than 100")
                         else:
+                            err = True
                             self.win.send_msg(
                                 0, "Error: Start treshold cannot be less than 50 or more than 95")
                     else:
+                        err = True
                         self.win.send_msg(
                             0, "Error: Difference between start en stop treshold should be 5 or more")
                 else:
+                    err = True
                     self.win.send_msg(
                         0, "Error: Start treshold cannot be more than stop treshold")
             except Exception as e:
                 print(e)
+                err = True
                 self.win.send_msg(0, "Error: Check custom treshold formatting")
-        print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
-        if ok_thermal and ok_bat:
+        # print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
+        if ok_thermal or ok_bat and not err:
             self.win.send_msg(0, "Successfully applied changes")
+        elif err:
+            pass
         else:
             self.win.send_msg(
-                0, "Error setting values. Check if DCC is installed and accessable")
+                0, "Values not set. No changes detected")
 
 
 class MainWindow (Adw.ApplicationWindow):
@@ -181,6 +243,22 @@ class MainWindow (Adw.ApplicationWindow):
         # Headerbar
         self.hb = Gtk.HeaderBar()
         self.box_main.append(self.hb)
+        # Create status in topbar
+        self.statusbox = Gtk.Box()
+        self.lbl_status = Gtk.Label(
+            label="",
+            margin_start=5,
+            margin_end=5,
+            margin_top=5,
+            margin_bottom=5,
+        )
+        self.spinner = Gtk.Spinner()
+        multi_append(
+            self.statusbox,
+            self.spinner,
+            self.lbl_status
+        )
+        self.hb.set_title_widget(self.statusbox)
         # Clamp widget
         self.clamp_main = Adw.Clamp()
         self.box_main.append(self.clamp_main)
@@ -415,25 +493,11 @@ class MainWindow (Adw.ApplicationWindow):
 
     # Set status in topheader
     def send_msg(self, work_status, msg):
-        statusbox = Gtk.Box()
-        lbl_status = Gtk.Label(
-            label=msg,
-            margin_start=5,
-            margin_end=5,
-            margin_top=5,
-            margin_bottom=5,
-        )
-        spinner = Gtk.Spinner()
         if work_status == 1:
-            spinner.start()
+            self.spinner.start()
         else:
-            spinner.stop()
-        multi_append(
-            statusbox,
-            spinner,
-            lbl_status
-        )
-        self.hb.set_title_widget(statusbox)
+            self.spinner.stop()
+        self.lbl_status.set_text(msg)
 
 
 class MyApp (Adw.Application):

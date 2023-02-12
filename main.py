@@ -17,6 +17,10 @@ faulthandler.enable()
 def multi_append(parent, *args):
     for obj in args:
         parent.append(obj)
+# Sets sensitiity of multiple gtk widgets at once
+def set_sens_multi(bool, *args):
+    for obj in args:
+        obj.set_sensitive(bool)
 
 
 # Interface class to read values and run commands in Dell DCC CCTK
@@ -104,6 +108,24 @@ class CctkInterface:
             ok_bat = True
         if ok_thermal or ok_bat:
             self.win.send_msg(0, "Successfully read values")
+            if not ok_thermal:
+                set_sens_multi(
+                    False,
+                    self.win.radio_optimized,
+                    self.win.radio_cool,
+                    self.win.radio_quiet,
+                    self.win.radio_ultra
+                )
+            if not ok_bat:
+                set_sens_multi(
+                    False,
+                    self.win.radio_adaptive,
+                    self.win.radio_standard,
+                    self.win.radio_prim_ac,
+                    self.win.express_charge,
+                    self.win.radio_custom,
+                    self.win.box_entry_tresholds
+                )
         else:
             self.win.send_msg(
                 0, "Error fetching values. Check if DCC is installed and accessable")

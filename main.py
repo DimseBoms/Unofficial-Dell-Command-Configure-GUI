@@ -10,7 +10,7 @@ from gi.repository import Gtk, Adw, GLib
 
 
 # Great segfault debugger
-faulthandler.enable()
+# faulthandler.enable()
 
 
 # Appends variable amount of objects to the given parent
@@ -34,6 +34,8 @@ class CctkInterface:
         self.last_radio_battery = object
         self.last_custom_start = 0
         self.last_custom_stop = 0
+        self.last_dropdown_kbd_ac = 0
+        self.last_dropdown_kbd_bat = 0
 
     # Threadstarter for read_values()
     def start_read_values(self, start_obj):
@@ -50,6 +52,7 @@ class CctkInterface:
         self.win.send_msg(1, "Reading values...")
         ok_thermal = False
         ok_bat = False
+        ok_kbd = False
         res_thermal = os.popen(
             self.cmd + "--ThermalManagement").read().replace("\n", "")
         # Reads thermal management option
@@ -106,7 +109,79 @@ class CctkInterface:
             self.win.entry_start_treshold.set_placeholder_text("")
             self.win.entry_stop_treshold.set_placeholder_text("")
             ok_bat = True
-        if ok_thermal or ok_bat:
+        # Reads keyboard backlight settings for AC
+        res_kbd_ac = os.popen(
+            self.cmd + "--KbdBacklightTimeoutAc").read().replace("\n", "")
+        if res_kbd_ac.split('=')[-1] == "5s":
+            self.last_dropdown_kbd_ac = 0
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(0)
+        elif res_kbd_ac.split('=')[-1] == "10s":
+            self.last_dropdown_kbd_ac = 1
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(1)
+        elif res_kbd_ac.split('=')[-1] == "15s":
+            self.last_dropdown_kbd_ac = 2
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(2)
+        elif res_kbd_ac.split('=')[-1] == "30s":
+            self.last_dropdown_kbd_ac = 3
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(3)
+        elif res_kbd_ac.split('=')[-1] == "1m":
+            self.last_dropdown_kbd_ac = 4
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(4)
+        elif res_kbd_ac.split('=')[-1] == "5m":
+            self.last_dropdown_kbd_ac = 5
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(5)
+        elif res_kbd_ac.split('=')[-1] == "15m":
+            self.last_dropdown_kbd_ac = 6
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(6)
+        elif res_kbd_ac.split('=')[-1] == "never":
+            self.last_dropdown_kbd_ac = 7
+            ok_kbd = True
+            self.win.dropdown_kbd_ac.set_selected(7)  
+        # Reads keyboard backlight settings for BAT
+        res_kbd_bat = os.popen(
+            self.cmd + "--KbdBacklightTimeoutBatt").read().replace("\n", "")
+        if res_kbd_bat.split('=')[-1] == "5s":
+            self.last_dropdown_kbd_bat = 0
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(0)
+        elif res_kbd_bat.split('=')[-1] == "10s":
+            self.last_dropdown_kbd_bat = 1
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(1)
+        elif res_kbd_bat.split('=')[-1] == "15s":
+            self.last_dropdown_kbd_bat = 2
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(2)
+        elif res_kbd_bat.split('=')[-1] == "30s":
+            self.last_dropdown_kbd_bat = 3
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(3)
+        elif res_kbd_bat.split('=')[-1] == "1m":
+            self.last_dropdown_kbd_bat = 4
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(4)
+        elif res_kbd_bat.split('=')[-1] == "5m":
+            self.last_dropdown_kbd_bat = 5
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(5)
+        elif res_kbd_bat.split('=')[-1] == "15m":
+            self.last_dropdown_kbd_bat = 6
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(6)
+        elif res_kbd_bat.split('=')[-1] == "never":
+            self.last_dropdown_kbd_bat = 7
+            ok_kbd = True
+            self.win.dropdown_kbd_bat.set_selected(7)
+        # Checks whether values were read successfully
+        # and disables settings that are not available
+        if ok_thermal or ok_bat or ok_kbd:
             self.win.send_msg(0, "Successfully read values")
             if not ok_thermal:
                 set_sens_multi(
@@ -126,6 +201,12 @@ class CctkInterface:
                     self.win.radio_custom,
                     self.win.box_entry_tresholds
                 )
+            if not ok_kbd:
+                set_sens_multi(
+                    False,
+                    self.win.kbd_ac_combo,
+                    self.win.kbd_bat_combo
+                )
         else:
             self.win.send_msg(
                 0, "Error fetching values. Check if DCC is installed and accessable")
@@ -135,6 +216,7 @@ class CctkInterface:
         self.win.send_msg(1, "Setting values...")
         ok_thermal = False
         ok_bat = False
+        ok_kbd = False
         err = False
         # Set thermal management option
         if self.win.radio_optimized.get_active() and \
@@ -240,8 +322,122 @@ class CctkInterface:
                 print(e)
                 err = True
                 self.win.send_msg(0, "Error: Check custom treshold formatting")
-        # print(f"ok_thermal: {ok_thermal}, ok_bat: {ok_bat}")
-        if ok_thermal or ok_bat and not err:
+        # Set keyboard backlight config for AC
+        if self.win.dropdown_kbd_ac.get_selected() == 0 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 0
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=5s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 1 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 1
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=10s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 2 and \
+                self.win.dropdown_kbd_ac.get_selected()!= self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 2
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=15s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 3 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 3
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=30s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 4 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 4
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=1m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 5 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 5
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=5m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 6 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 6
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=15m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_ac.get_selected() == 7 and \
+                self.win.dropdown_kbd_ac.get_selected() != self.last_dropdown_kbd_ac:
+            self.last_dropdown_kbd_ac = 7
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutAc=Never", shell=True)
+            if res == 0:
+                ok_kbd = True
+        # Set keyboard backlight config for battery
+        if self.win.dropdown_kbd_bat.get_selected() == 0 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 0
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=5s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 1 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 1
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=10s", shell=True)
+            if res == 0:    
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 2 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 2
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=15s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 3 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 3
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=30s", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 4 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 4
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=1m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 5 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 5
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=5m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 6 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 6
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=15m", shell=True)
+            if res == 0:
+                ok_kbd = True
+        elif self.win.dropdown_kbd_bat.get_selected() == 7 and \
+                self.win.dropdown_kbd_bat.get_selected() != self.last_dropdown_kbd_bat:
+            self.last_dropdown_kbd_bat = 7
+            res = subprocess.call(
+                self.cmd + "--KbdBacklightTimeoutBatt=Never", shell=True)
+            if res == 0:
+                ok_kbd = True
+        # Checks if everything went ok
+        if ok_thermal or ok_bat or ok_kbd and not err:
             self.win.send_msg(0, "Successfully applied changes")
         elif err:
             pass
@@ -472,6 +668,82 @@ class MainWindow (Adw.ApplicationWindow):
         self.entry_stop_treshold = Gtk.Entry()
         self.entry_stop_treshold.set_placeholder_text("55-100")
         self.entry_stop_treshold.set_max_length(3)
+        #################################
+        # Category: Keyboard backlight  #
+        #################################
+        # Label for keyboard backlight
+        self.lbl_kbd = Gtk.Label(
+            label="Keyboard backlight timeout",
+            margin_start=10,
+            margin_end=10,
+            margin_top=15,
+            margin_bottom=5,
+        )
+        # Dropdown options for kbd backlight
+        self.kbd_options = [
+            "5s",
+            "10s",
+            "15s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "Never"
+        ]
+        # Dropdowns for kbd backlight
+        self.dropdown_kbd_ac = Gtk.DropDown.new_from_strings(self.kbd_options)
+        self.dropdown_kbd_bat = Gtk.DropDown.new_from_strings(self.kbd_options)
+        # Labels for kbd backlight dropdowns
+        self.lbl_kbd_ac = Gtk.Label(
+            label="AC:",
+            halign=Gtk.Align.CENTER,
+            margin_start=5,
+            margin_end=5,
+            margin_top=5,
+            margin_bottom=5,
+        )
+        self.lbl_kbd_bat = Gtk.Label(
+            label="Battery:",
+            halign=Gtk.Align.CENTER,
+            margin_start=5,
+            margin_end=5,
+            margin_top=5,
+            margin_bottom=5,
+        )
+        # Hbox for AC kbd dropdown
+        self.kbd_ac_hbox = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.CENTER,
+            margin_start=15,
+            margin_end=15,
+            margin_top=5,
+            margin_bottom=5
+        )
+        multi_append(self.kbd_ac_hbox, self.lbl_kbd_ac, self.dropdown_kbd_ac)
+        # Hbox for battery kbd dropdown
+        self.kbd_bat_hbox = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            halign=Gtk.Align.CENTER,
+            margin_start=15,
+            margin_end=15,
+            margin_top=5,
+            margin_bottom=5
+        )
+        multi_append(self.kbd_bat_hbox, self.lbl_kbd_bat, self.dropdown_kbd_bat)
+        # Hbox for keyboard dropdowns
+        self.kbd_hbox = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=100,
+            halign=Gtk.Align.CENTER,
+            margin_start=15,
+            margin_end=15,
+            margin_top=5,
+            margin_bottom=5
+            )
+        multi_append(self.kbd_hbox, self.kbd_ac_hbox, self.kbd_bat_hbox)
+        # Vbox for keyboard dropdowns
+        self.kbd_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, halign=Gtk.Align.CENTER, margin_bottom=5)
+        multi_append(self.kbd_vbox, self.lbl_kbd, self.kbd_hbox)
         # Buttons to apply/discard changes
         self.button_box = Gtk.Box(
             halign=Gtk.Align.CENTER,
@@ -479,7 +751,7 @@ class MainWindow (Adw.ApplicationWindow):
             margin_start=10,
             margin_end=10,
             margin_top=20,
-            margin_bottom=20,
+            margin_bottom=20
         )
         self.discard_button = Gtk.Button(label='Discard changes and reload')
         self.discard_button.get_style_context().add_class('destructive-action')
@@ -499,7 +771,8 @@ class MainWindow (Adw.ApplicationWindow):
             self.box_power_batt,
             self.lbl_batt_charge_conf,
             self.box_radio_batt_charge_conf,
-            self.box_entry_tresholds
+            self.box_entry_tresholds,
+            self.kbd_vbox
         )
         # Adds elements outside of clamp
         self.box_main.append(self.button_box)
@@ -563,4 +836,4 @@ if not install:
     app.run(sys.argv)
 
 # TODO: Add polkit rules so the application can be run with pkexec
-# TODO: Add ability to control keyboard backlight settings
+# TODO: Move styling to stylesheets

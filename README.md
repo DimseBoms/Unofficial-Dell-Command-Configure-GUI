@@ -1,5 +1,7 @@
 # Unofficial Dell Command GUI
-Simple, unofficial frontend to control some of the functions from Dell Command Configure. Can be used to change thermal management options, battery charge behaviour as well as battery charge tresholds.
+Simple, unofficial frontend to control some of the functions from Dell Command Configure. Can be used to change thermal management options, battery charge behaviour and keyboard backlight.
+
+Pull requests are welcome
 
 [<img src="https://raw.githubusercontent.com/DimseBoms/Unofficial-Dell-Command-Configure-GUI/main/Screenshot.png">](https://raw.githubusercontent.com/DimseBoms/Unofficial-Dell-Command-Configure-GUI/main/Screenshot.png)
 

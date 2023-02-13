@@ -186,6 +186,7 @@ class CctkInterface:
             if not ok_thermal:
                 set_sens_multi(
                     False,
+                    self.win.lbl_therm_manag,
                     self.win.radio_optimized,
                     self.win.radio_cool,
                     self.win.radio_quiet,
@@ -194,6 +195,7 @@ class CctkInterface:
             if not ok_bat:
                 set_sens_multi(
                     False,
+                    self.win.lbl_batt_charge_conf,
                     self.win.radio_adaptive,
                     self.win.radio_standard,
                     self.win.radio_prim_ac,
@@ -204,6 +206,7 @@ class CctkInterface:
             if not ok_kbd:
                 set_sens_multi(
                     False,
+                    self.win.lbl_kbd,
                     self.win.dropdown_kbd_ac,
                     self.win.dropdown_kbd_bat
                 )

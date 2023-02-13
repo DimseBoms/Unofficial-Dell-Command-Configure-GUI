@@ -203,10 +203,12 @@ class CctkInterface:
                     self.win.radio_custom,
                     self.win.box_entry_tresholds
                 )
-            if not ok_kbd:
+            if True:
                 set_sens_multi(
                     False,
                     self.win.lbl_kbd,
+                    self.win.lbl_kbd_ac,
+                    self.win.lbl_kbd_bat,
                     self.win.dropdown_kbd_ac,
                     self.win.dropdown_kbd_bat
                 )

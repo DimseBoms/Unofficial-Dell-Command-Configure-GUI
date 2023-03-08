@@ -1,5 +1,5 @@
-# If you have trouble installing DCC
-* You can try another version of basically the same program, except that it exists in the system tray (https://github.com/DimseBoms/dell-power-tray). This version uses libsmbios (https://github.com/dell/libsmbios) as a backend which is less complex, faster and open-source.
+# If you have trouble installing DCC on your distro
+* You can try another version of basically the same program, except that it exists in the system tray (https://github.com/DimseBoms/dell-power-tray). This version uses libsmbios (https://github.com/dell/libsmbios) as a backend which is less intrusive, faster and open-source.
 
 # Unofficial Dell Command GUI
 Simple, unofficial frontend to control some of the functions from Dell Command Configure. Can be used to change thermal management options, battery charge behaviour and keyboard backlight.
